@@ -1,10 +1,4 @@
-﻿Of course. Based on the complete, fully functional project we have built, here is a comprehensive and professional `README.md` file that you can use for it.
-
-This README explains what the project is, its features, how to use it, and includes important disclaimers.
-
----
-
-# VRChat Unfriend Manager
+﻿# VRChat Unfriend Manager
 
 A simple, powerful, terminal-based tool for managing your VRChat friends list in bulk. Built for speed and efficiency, this tool allows you to quickly clean up your friends list without the tedious process of using the in-game or website UI.
 
