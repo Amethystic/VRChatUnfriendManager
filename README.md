@@ -17,7 +17,7 @@ A simple, powerful, terminal-based tool for managing your VRChat friends list in
 
 ## Requirements
 
--   [.NET 6.0 Runtime (or newer)](https://dotnet.microsoft.com/en-us/download/dotnet/6.0)
+-   [.NET 6.0 Runtime (or newer)](https://dotnet.microsoft.com/en-us/download/dotnet/9.0)
 
 ## How to Use
 
