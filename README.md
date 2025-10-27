@@ -5,6 +5,10 @@ A simple, powerful, terminal-based tool for managing your VRChat friends list in
 ![S1](https://cdn.discordapp.com/attachments/1398149285400281199/1432155901447508008/image.png?ex=6900069f&is=68feb51f&hm=e90ebc100545652c2745809896b7c0c5f565275f33b5f5e3790bf62172b76acb&)
 ![S2](https://media.discordapp.net/attachments/1286497694587686963/1432167189024215100/image.png?ex=69001122&is=68febfa2&hm=974ec307689afedfaec5d9c8c38b44b72473c264d4a94711ada6bef0a2598775&=&format=png&quality=lossless)
 
+# Before: ![Before](https://cdn.discordapp.com/attachments/1286497694587686963/1432175167303581706/image.png?ex=69001890&is=68fec710&hm=fc3605f339ebbfae02965a4158b630bdf9bd8db8a6a3bdd0880a44ffa1dd8141&)
+
+# After: ![After](https://cdn.discordapp.com/attachments/1286497694587686963/1432175198760730746/image.png?ex=69001897&is=68fec717&hm=4dde554da89008c03de343ac474750f4c8c60d39c982c8d2c1c760d725c6348c&)
+
 ## Features
 
 -   **Fetch Entire Friends List:** Automatically fetches your complete friends list, including both online and offline users, bypassing the API's pagination limits.
