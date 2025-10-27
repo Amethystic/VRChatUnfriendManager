@@ -67,7 +67,3 @@ If you wish to build the project yourself:
 2.  Navigate to the project directory: `cd Unfriendmaxxing`
 3.  Ensure you have the .NET 6.0 SDK (or newer) installed.
 4.  Run the application: `dotnet run`
-
-## License
-
-This project is licensed under the MIT License.
