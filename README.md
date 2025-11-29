@@ -1,69 +1,73 @@
-﻿# VRChat Unfriend Manager
+﻿***
 
-A simple, powerful, terminal-based tool for managing your VRChat friends list in bulk. Built for speed and efficiency, this tool allows you to quickly clean up your friends list without the tedious process of using the in-game or website UI.
+# VRChat Unfriend Manager (VRC:UFM)
 
-![S1](https://cdn.discordapp.com/attachments/1398149285400281199/1432155901447508008/image.png?ex=6900069f&is=68feb51f&hm=e90ebc100545652c2745809896b7c0c5f565275f33b5f5e3790bf62172b76acb&)
-![S2](https://media.discordapp.net/attachments/1286497694587686963/1432167189024215100/image.png?ex=69001122&is=68febfa2&hm=974ec307689afedfaec5d9c8c38b44b72473c264d4a94711ada6bef0a2598775&=&format=png&quality=lossless)
+**VRC:UFM** is a powerful, terminal-based utility designed for managing your VRChat friends list with speed and precision. It allows you to bulk unfriend inactive users, re-add friends from backups, and organize your list without the limitations of the standard in-game or website UI.
 
-# Before: ![Before](https://cdn.discordapp.com/attachments/1286497694587686963/1432175167303581706/image.png?ex=69001890&is=68fec710&hm=fc3605f339ebbfae02965a4158b630bdf9bd8db8a6a3bdd0880a44ffa1dd8141&)
+![S1](link)
 
-# After: ![After](https://cdn.discordapp.com/attachments/1286497694587686963/1432175198760730746/image.png?ex=69001897&is=68fec717&hm=4dde554da89008c03de343ac474750f4c8c60d39c982c8d2c1c760d725c6348c&)
+## 🚀 Features
 
-## Features
+*   **Smart Inactivity Filtering:** Filter your friends list by last login time. Easily find users who haven't logged in for a specific number of Days, Months, or Years.
+*   **Advanced Sorting:** Sort your list by **Last Seen (Oldest First)**, **Last Seen (Newest First)**, or Alphabetically (A-Z / Z-A).
+*   **Favorites Protection:** The "Exclude Favorites" option ensures you don't accidentally remove close friends or people in your favorite groups.
+*   **Bulk Unfriend & Re-Add:**
+    *   **Unfriend:** Select multiple users and remove them in one go.
+    *   **Re-Add:** Mistake? Restore friends by loading a previously saved JSON backup; the tool will automatically send friend requests to everyone in the file.
+*   **Configuration Saving:** The app remembers your Username, Password (securely encoded), and your preferred settings (Sort Order, Inactive Filters, etc.) so you don't have to set them up every time.
+*   **Safety First:**
+    *   **2FA Support:** Full support for Authenticator Apps (TOTP), Email OTP, and Backup codes.
+    *   **Rate-Limit Protection:** Operations include randomized delays (5-10 seconds) to keep your account safe from API spam detection.
+    *   **Pause/Resume:** Need to stop? Pause the operation at any time and resume when ready.
+*   **JSON Backups:** One-click backup of your currently displayed list to a timestamped `.json` file.
 
--   **Fetch Entire Friends List:** Automatically fetches your complete friends list, including both online and offline users, bypassing the API's pagination limits.
--   **Optional Favorite Filtering:** Choose whether to include or exclude your favorited friends and friends in favorite groups with a simple checkbox. The list updates instantly.
--   **Multi-Select & Bulk Actions:** Mark individual friends, or use the "Mark All" and "Unmark All" buttons for quick selections.
--   **Safe, Randomized Delays:** The unfriend process includes a safe, randomized delay (5-10 seconds by default) between each API call to prevent your account from being rate-limited.
--   **Full 2FA Support:** Securely log in with your Two-Factor Authentication code, supporting Authenticator Apps (TOTP), Email Codes (OTP), and Recovery Codes.
--   **Session Persistence:** Use the "Remember me" option to save your session securely, allowing you to close and reopen the app without needing to log in again.
--   **Backup to JSON:** Before making any changes, you can back up your entire current friends list to a timestamped `.json` file with a single click.
+## 📋 Requirements
 
-## Requirements
+*   **[.NET 6.0 Runtime (or newer)](https://dotnet.microsoft.com/en-us/download/dotnet/9.0)**
+*   Windows 10/11 (Recommended for Toast Notifications)
 
--   [.NET 6.0 Runtime (or newer)](https://dotnet.microsoft.com/en-us/download/dotnet/9.0)
+## 🛠️ How to Use
 
-## How to Use
+### 1. Login & Setup
+1.  Launch the application.
+2.  Enter your VRChat credentials.
+3.  Check **"Remember me"** to save your login and your UI settings (Sort order, filters, etc.) for next time.
+4.  If you have 2FA enabled, enter your code when prompted.
 
-### Quick Start
+### 2. Filtering & Sorting
+*   **Exclude Favorites:** Checked by default. Uncheck this if you really want to see/remove favorited friends.
+*   **Only show inactive ≥:** Check this to filter users based on how long they have been offline.
+    *   *Example:* Set to `1` and `Years` to see only people who haven't logged in for over a year.
+*   **Sort by:** Use the dropdown to organize the list. "Last Seen: Oldest" is the default, placing users who have **never** logged in at the very top.
 
-1.  Go to the **Releases** page and download the latest version for your operating system.
-2.  Unzip the folder to a location of your choice.
-3.  Run the executable (`Unfriendmaxxing.exe` on Windows).
+### 3. Managing the List
+*   **Navigation:** Use `Arrow Keys` to move up/down.
+*   **Selection:** Press `Spacebar` to check/uncheck a specific user.
+*   **Bulk Select:** Use the `Mark All` or `Unmark All` buttons to select everyone currently visible in the list.
 
-### Step-by-Step Guide
-
-1.  **Login:**
-    -   Enter your VRChat **Username** and **Password**.
-    -   If you have 2FA enabled, a dialog box will appear after you click "Login". Enter your 6-digit code.
-    -   Check **"Remember me"** to save your login session for the next time you open the app.
-
-2.  **Filtering:**
-    -   The **"Exclude Favorites"** checkbox is checked by default. This will show you a list of only your non-favorited friends.
-    -   **Uncheck** this box to display your **entire** friends list, including all favorites. The list will update instantly.
-
-3.  **Managing Friends:**
-    -   Use the **Arrow Keys** to navigate the friends list.
-    -   Press the **Spacebar** to mark or unmark the currently selected friend.
-    -   Click the **"Mark All"** or **"Unmark All"** buttons to manage the entire displayed list.
-
-4.  **Actions:**
-    -   **Unfriend Marked Friends:** This will begin the bulk unfriend process for all friends who have a checkmark next to their name. A confirmation dialog will appear first.
-    -   **Backup All Friends to JSON:** This saves a complete, unfiltered copy of your friends list to a `.json` file in the same directory as the application.
+### 4. Actions
+*   **Unfriend Marked:** Removes all selected users. You will be asked to confirm before the process starts.
+*   **Backup Displayed:** Saves the currently visible list to a JSON file (e.g., `VRChatFriends_2025-01-01.json`).
+*   **Re-add from JSON:** Select a backup file to automatically send friend requests to everyone in that list.
 
 ---
 
-> ### **DISCLAIMER: USE AT YOUR OWN RISK**
+## ⚠️ Disclaimer
+
+> **USE AT YOUR OWN RISK.**
 >
-> -   This is an **unofficial tool** and is not affiliated with, endorsed, or supported by VRChat Inc.
-> -   **Unfriending is a permanent action and cannot be undone.** Always be certain before confirming the unfriend operation. It is highly recommended to use the **Backup** feature first.
-> -   While this tool is designed to be safe, using third-party applications to interact with the VRChat API is against the Terms of Service. Use this tool responsibly. The developer is not responsible for any actions taken against your account.
+> *   **Unofficial Tool:** VRC:UFM is a third-party tool and is not affiliated with VRChat Inc.
+> *   **Permanent Actions:** Unfriending is permanent. While the "Re-add" feature exists, it relies on the user accepting your new friend request. **Always create a Backup before running bulk operations.**
+> *   **TOS:** Automating actions on your account technically falls into a grey area of VRChat's Terms of Service. This tool uses human-like delays to minimize risk, but the developer is not responsible for any administrative actions taken against your account.
 
-## Building from Source
+---
 
-If you wish to build the project yourself:
+## 🏗️ Building from Source
 
-1.  Clone the repository: `git clone <repository_url>`
-2.  Navigate to the project directory: `cd Unfriendmaxxing`
-3.  Ensure you have the .NET 6.0 SDK (or newer) installed.
-4.  Run the application: `dotnet run`
+1.  Clone this repository.
+2.  Ensure you have the .NET 6.0 SDK installed.
+3.  Navigate to the project folder in your terminal.
+4.  Run:
+    ```bash
+    dotnet run
+    ```
