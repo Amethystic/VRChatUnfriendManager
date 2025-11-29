@@ -4,7 +4,7 @@
 
 **VRC:UFM** is a powerful, terminal-based utility designed for managing your VRChat friends list with speed and precision. It allows you to bulk unfriend inactive users, re-add friends from backups, and organize your list without the limitations of the standard in-game or website UI.
 
-![S1](link)
+![S1](https://github.com/Amethystic/VRChatUnfriendManager/blob/master/Product%20Images/VRCUFMProduct.png)
 
 ## 🚀 Features
 
