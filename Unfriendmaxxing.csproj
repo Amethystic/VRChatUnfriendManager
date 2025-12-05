@@ -6,6 +6,7 @@
         <Nullable>enable</Nullable>
         <TargetFramework>net9.0-windows10.0.17763.0</TargetFramework>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <ApplicationIcon>icon.ico</ApplicationIcon>
     </PropertyGroup>
 
     <ItemGroup>
@@ -18,7 +19,13 @@
       <PackageReference Include="Terminal.Gui" Version="1.19.0" />
       <PackageReference Include="VRChat" Version="1.0.0" />
       <PackageReference Include="VRChat.API" Version="1.20.4" />
-        <PackageReference Include="VRChat.API" Version="1.21.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Remove="icon.ico" />
+      <Resource Include="icon.ico">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </Resource>
     </ItemGroup>
 
 </Project>
