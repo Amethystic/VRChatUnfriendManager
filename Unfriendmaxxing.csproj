@@ -2,30 +2,29 @@
 
     <PropertyGroup>
         <OutputType>Exe</OutputType>
+        <TargetFramework>net9.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
-        <TargetFramework>net9.0-windows10.0.17763.0</TargetFramework>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-        <ApplicationIcon>icon.ico</ApplicationIcon>
+        <!-- Linux doesn't use .ico inside the binary the same way Windows does -->
+        <!-- We will load icon.png manually in code -->
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="ImGui.NET" Version="1.91.6.1" />
-      <PackageReference Include="Microsoft-WindowsAPICodePack-Shell" Version="1.1.5" />
-      <PackageReference Include="Microsoft.Toolkit.Uwp.Notifications" Version="7.1.3" />
-      <PackageReference Include="Raylib-cs" Version="7.0.2" />
-      <PackageReference Include="rlImgui-cs" Version="3.2.0" />
-      <PackageReference Include="System.Drawing.Common" Version="10.0.0" />
-      <PackageReference Include="Terminal.Gui" Version="1.19.0" />
-      <PackageReference Include="VRChat" Version="1.0.0" />
-      <PackageReference Include="VRChat.API" Version="1.20.4" />
+        <!-- Cross Platform GUI Libraries -->
+        <PackageReference Include="Raylib-cs" Version="7.0.2" />
+        <PackageReference Include="rlImgui-cs" Version="3.2.0" />
+        <PackageReference Include="ImGui.NET" Version="1.91.6.1" />
+
+        <!-- VRChat API -->
+        <PackageReference Include="VRChat.API" Version="1.20.4" />
     </ItemGroup>
 
     <ItemGroup>
-      <None Remove="icon.ico" />
-      <Resource Include="icon.ico">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </Resource>
+        <!-- Ensure you have an icon.png in your project folder -->
+        <None Update="icon.png">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
     </ItemGroup>
 
 </Project>
