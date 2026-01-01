@@ -69,7 +69,7 @@ namespace VRChatUnfriendManager
     // --- API Service (Unchanged mostly) ---
     public class VRChatApiService
     {
-        private const string UA = "VRChatUnfriendManager/3.0";
+        private const string UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
         private static readonly Uri BaseUri = new("https://api.vrchat.cloud/api/1/");
         private readonly HttpClient client;
         private readonly CookieContainer cookies = new();
@@ -183,69 +183,101 @@ namespace VRChatUnfriendManager
         {
             try
             {
+                // 1. SETUP HEADERS & BASIC AUTH
                 client.DefaultRequestHeaders.Clear();
                 client.DefaultRequestHeaders.Add("User-Agent", UA);
-                var loginPageResp = await client.GetAsync("https://vrchat.com/login");
-                var loginPageHtml = await loginPageResp.Content.ReadAsStringAsync();
-                var csrfToken = ExtractCsrfToken(loginPageHtml);
+        
+                var authString = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{username}:{password}"));
+                client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", authString);
 
-                if (string.IsNullOrEmpty(csrfToken)) return (false, null, "CSRF token missing");
-
-                var cookiesHeader = loginPageResp.Headers.FirstOrDefault(h => h.Key.Equals("set-cookie", StringComparison.OrdinalIgnoreCase))
-                    .Value?.FirstOrDefault()?.Split(';')[0];
-
-                var formData = new Dictionary<string, string>
-                {
-                    { "username", username },
-                    { "password", password },
-                    { "csrf_token", csrfToken }
-                };
-
-                var content = new FormUrlEncodedContent(formData);
-                client.DefaultRequestHeaders.Clear();
-                client.DefaultRequestHeaders.Add("User-Agent", UA);
-                client.DefaultRequestHeaders.Add("Referer", "https://vrchat.com/login");
-                client.DefaultRequestHeaders.Add("Origin", "https://vrchat.com");
-                if (!string.IsNullOrEmpty(cookiesHeader))
-                    client.DefaultRequestHeaders.Add("Cookie", cookiesHeader);
-
-                var response = await client.PostAsync("https://vrchat.com/api/1/auth/user/login", content);
+                // 2. ATTEMPT LOGIN
+                var response = await client.GetAsync("https://api.vrchat.cloud/api/1/auth/user");
                 var body = await response.Content.ReadAsStringAsync();
 
-                if (!response.IsSuccessStatusCode)
-                    return (false, null, $"Login failed ({(int)response.StatusCode})\n{body}");
+                // 3. HANDLE 2FA
+                if (body.Contains("requiresTwoFactorAuth"))
+                {
+                    show2FADialog = true;
+                    tfaTcs = new TaskCompletionSource<string?>();
+            
+                    // Wait for UI input
+                    var code = await tfaTcs.Task;
+            
+                    if (string.IsNullOrEmpty(code))
+                    {
+                        client.DefaultRequestHeaders.Authorization = null;
+                        return (false, null, "2FA Cancelled");
+                    }
 
-                var authCookieHeader = response.Headers
-                    .FirstOrDefault(h => h.Key.Equals("set-cookie", StringComparison.OrdinalIgnoreCase))
-                    .Value?.FirstOrDefault(c => c.Contains("auth="));
+                    // Verify 2FA
+                    client.DefaultRequestHeaders.Authorization = null; // Clear Basic Auth
+            
+                    var verifyJson = JsonSerializer.Serialize(new { code = code });
+                    var verifyContent = new StringContent(verifyJson, Encoding.UTF8, "application/json");
+            
+                    var verifyResp = await client.PostAsync("https://api.vrchat.cloud/api/1/auth/twofactorauth/totp/verify", verifyContent);
+            
+                    if (!verifyResp.IsSuccessStatusCode)
+                    {
+                        return (false, null, "2FA Verification Failed");
+                    }
+                }
+                else if (!response.IsSuccessStatusCode)
+                {
+                    client.DefaultRequestHeaders.Authorization = null;
+                    return (false, null, $"Login failed: {response.StatusCode}");
+                }
+        
+                client.DefaultRequestHeaders.Authorization = null;
 
-                if (string.IsNullOrEmpty(authCookieHeader))
-                    return (false, null, "No auth cookie");
+                // 4. SAFE COOKIE EXTRACTION
+                // We iterate manually to ensure we find it, avoiding indexer null crashes
+                var cookieCollection = cookies.GetCookies(BaseUri);
+                Cookie? authCookie = null;
+                Cookie? tfaCookie = null;
 
-                var authPart = authCookieHeader.Split(';')[0];
-                var fullCookie = authPart;
+                foreach (Cookie c in cookieCollection)
+                {
+                    if (c.Name == "auth") authCookie = c;
+                    if (c.Name == "twoFactorAuth") tfaCookie = c;
+                }
 
-                var tfaPart = response.Headers
-                    .FirstOrDefault(h => h.Key.Equals("set-cookie", StringComparison.OrdinalIgnoreCase))
-                    .Value?.FirstOrDefault(c => c.Contains("twoFactorAuth="))
-                    ?.Split(';')[0];
+                if (authCookie == null) 
+                    return (false, null, "Login successful, but 'auth' cookie was not found.");
 
-                if (!string.IsNullOrEmpty(tfaPart))
-                    fullCookie += $"; {tfaPart}";
+                string fullCookie = $"auth={authCookie.Value}";
+                if (tfaCookie != null) fullCookie += $"; twoFactorAuth={tfaCookie.Value}";
 
-                cfg = new Configuration { UserAgent = UA };
+                // 5. CONFIGURATION SETUP (Defensive)
+                cfg = new Configuration();
+                cfg.UserAgent = UA;
+        
+                // Ensure DefaultHeaders is initialized (Common source of NRE)
+                if (cfg.DefaultHeaders == null) cfg.DefaultHeaders = new Dictionary<string, string>();
                 cfg.DefaultHeaders["Cookie"] = fullCookie;
+        
                 SaveCookies();
 
-                var user = await new AuthenticationApi(cfg).GetCurrentUserAsync();
-                return (true, user.DisplayName ?? user.Username, null);
+                // 6. GET USER (Defensive)
+                var authApi = new AuthenticationApi(cfg);
+                var user = await authApi.GetCurrentUserAsync();
+
+                if (user == null) 
+                    return (false, null, "API returned null user object.");
+
+                // Handle potential null properties on the user object
+                string name = user.DisplayName ?? user.Username ?? "Unknown User";
+        
+                return (true, name, null);
             }
             catch (Exception ex)
             {
-                return (false, null, $"Error: {ex.Message}");
+                client.DefaultRequestHeaders.Authorization = null;
+                // Return the full stack trace so we can see exactly which line is null
+                return (false, null, $"Error: {ex.Message}\n{ex.StackTrace}");
             }
         }
-
+        
         public void Draw2FADialog()
         {
             if (!show2FADialog || tfaTcs == null) return;
