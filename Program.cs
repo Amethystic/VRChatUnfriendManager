@@ -183,24 +183,25 @@ namespace VRChatUnfriendManager
         {
             try
             {
-                // 1. SETUP HEADERS & BASIC AUTH
+                // 1. USE BASIC AUTH (Bypasses Cloudflare HTML checks)
                 client.DefaultRequestHeaders.Clear();
                 client.DefaultRequestHeaders.Add("User-Agent", UA);
         
+                // Create Basic Auth Header
                 var authString = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{username}:{password}"));
                 client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", authString);
 
-                // 2. ATTEMPT LOGIN
+                // 2. ATTEMPT LOGIN DIRECTLY VIA API
                 var response = await client.GetAsync("https://api.vrchat.cloud/api/1/auth/user");
                 var body = await response.Content.ReadAsStringAsync();
 
-                // 3. HANDLE 2FA
+                // 3. HANDLE 2FA (If required)
                 if (body.Contains("requiresTwoFactorAuth"))
                 {
                     show2FADialog = true;
                     tfaTcs = new TaskCompletionSource<string?>();
             
-                    // Wait for UI input
+                    // Wait for user to enter code in UI
                     var code = await tfaTcs.Task;
             
                     if (string.IsNullOrEmpty(code))
@@ -210,17 +211,15 @@ namespace VRChatUnfriendManager
                     }
 
                     // Verify 2FA
-                    client.DefaultRequestHeaders.Authorization = null; // Clear Basic Auth
+                    client.DefaultRequestHeaders.Authorization = null; // Clear Basic Auth for the verify step
             
                     var verifyJson = JsonSerializer.Serialize(new { code = code });
                     var verifyContent = new StringContent(verifyJson, Encoding.UTF8, "application/json");
             
                     var verifyResp = await client.PostAsync("https://api.vrchat.cloud/api/1/auth/twofactorauth/totp/verify", verifyContent);
             
-                    if (!verifyResp.IsSuccessStatusCode)
-                    {
+                    if (!verifyResp.IsSuccessStatusCode) 
                         return (false, null, "2FA Verification Failed");
-                    }
                 }
                 else if (!response.IsSuccessStatusCode)
                 {
@@ -228,53 +227,41 @@ namespace VRChatUnfriendManager
                     return (false, null, $"Login failed: {response.StatusCode}");
                 }
         
+                // Clear auth header after success
                 client.DefaultRequestHeaders.Authorization = null;
 
-                // 4. SAFE COOKIE EXTRACTION
-                // We iterate manually to ensure we find it, avoiding indexer null crashes
+                // 4. SAFE COOKIE EXTRACTION (Fixes NullReferenceException)
                 var cookieCollection = cookies.GetCookies(BaseUri);
                 Cookie? authCookie = null;
-                Cookie? tfaCookie = null;
-
-                foreach (Cookie c in cookieCollection)
-                {
-                    if (c.Name == "auth") authCookie = c;
-                    if (c.Name == "twoFactorAuth") tfaCookie = c;
-                }
+                foreach (Cookie c in cookieCollection) if (c.Name == "auth") authCookie = c;
 
                 if (authCookie == null) 
                     return (false, null, "Login successful, but 'auth' cookie was not found.");
 
                 string fullCookie = $"auth={authCookie.Value}";
+                var tfaCookie = cookies.GetCookies(BaseUri)["twoFactorAuth"];
                 if (tfaCookie != null) fullCookie += $"; twoFactorAuth={tfaCookie.Value}";
 
-                // 5. CONFIGURATION SETUP (Defensive)
+                // 5. INITIALIZE CONFIGURATION SAFELY
                 cfg = new Configuration();
                 cfg.UserAgent = UA;
-        
-                // Ensure DefaultHeaders is initialized (Common source of NRE)
                 if (cfg.DefaultHeaders == null) cfg.DefaultHeaders = new Dictionary<string, string>();
                 cfg.DefaultHeaders["Cookie"] = fullCookie;
         
                 SaveCookies();
 
-                // 6. GET USER (Defensive)
+                // 6. GET CURRENT USER
                 var authApi = new AuthenticationApi(cfg);
                 var user = await authApi.GetCurrentUserAsync();
-
-                if (user == null) 
-                    return (false, null, "API returned null user object.");
-
-                // Handle potential null properties on the user object
-                string name = user.DisplayName ?? user.Username ?? "Unknown User";
         
-                return (true, name, null);
+                if (user == null) return (false, null, "Failed to retrieve user details.");
+        
+                return (true, user.DisplayName ?? user.Username, null);
             }
             catch (Exception ex)
             {
                 client.DefaultRequestHeaders.Authorization = null;
-                // Return the full stack trace so we can see exactly which line is null
-                return (false, null, $"Error: {ex.Message}\n{ex.StackTrace}");
+                return (false, null, $"Error: {ex.Message}");
             }
         }
         
@@ -402,32 +389,38 @@ namespace VRChatUnfriendManager
 
         public static async Task Main(string[] args)
         {
+            // 1. DETECT AUTOSTART ARGUMENT
+            bool isAutostart = args.Contains("--autostart");
+
             Console.WriteLine("VRChat Unfriend Manager v3 Starting...");
             Paths.EnsureExists();
             LoadConfig();
 
-            // Sync VRCX Shortcuts on startup if needed
+            // Sync VRCX Shortcuts
             if (Directory.Exists(Paths.VrcxStartup))
             {
                 UpdateVrcxShortcut("desktop", config.VrcxStartupDesktop);
                 UpdateVrcxShortcut("vr", config.VrcxStartupVr);
             }
 
+            // Ensure startup registry/file is correct (adds/removes the argument as needed)
             if (config.RunOnStartup) UpdateStartup(true);
 
+            // 2. CONFIGURE WINDOW FLAGS
             ConfigFlags flags = ConfigFlags.ResizableWindow | ConfigFlags.HighDpiWindow;
             if (config.UseCustomTitleBar) flags |= ConfigFlags.UndecoratedWindow;
+            
+            // If autostarting, hide the window immediately
+            if (isAutostart) flags |= ConfigFlags.HiddenWindow;
 
             Raylib.SetConfigFlags(flags);
             Raylib.InitWindow(1280, 800, "VRChat Unfriend Manager v3");
             
-            // --- CROSS PLATFORM ICON LOADING ---
+            // Set Icon
             try
             {
-                // Try to load png first (better for linux), then ico
                 string iconPath = "icon.png";
                 if (!File.Exists(iconPath)) iconPath = "icon.ico";
-                
                 if (File.Exists(iconPath))
                 {
                     var img = Raylib.LoadImage(iconPath);
@@ -435,15 +428,11 @@ namespace VRChatUnfriendManager
                     Raylib.UnloadImage(img);
                 }
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[ICON] Failed to set icon: {ex.Message}");
-            }
-            // ------------------------------
+            catch { }
 
             Raylib.SetTargetFPS(60);
 
-            // Hide console only on Windows
+            // Hide Console on Windows
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 #if !DEBUG
@@ -456,6 +445,7 @@ namespace VRChatUnfriendManager
 
             rlImGui.Setup(true);
 
+            // Init UI variables from Config
             user = config.Username;
             remember = config.RememberMe;
             hideFavs = config.ExcludeFavorites;
@@ -466,8 +456,42 @@ namespace VRChatUnfriendManager
 
             bool firstFrame = true;
 
+            // MAIN LOOP
             while (!shouldExit)
             {
+                // 3. BACKGROUND MODE (HIDDEN)
+                if (isAutostart)
+                {
+                    // Run initialization logic once
+                    if (firstFrame)
+                    {
+                        firstFrame = false;
+                        _ = Task.Run(async () =>
+                        {
+                            await Task.Delay(1000); // Slight delay to let networking settle
+                            var (restored, name) = await api.RestoreSessionFromDiskOrConfigAsync();
+                            if (restored && name != null)
+                            {
+                                loggedInAs = name;
+                                isLoggedIn = true;
+                                sessionRestored = true;
+                                status = $"Background Login: {name}";
+                                
+                                // Start the scheduler if enabled
+                                if (config.AutoUnfriendEnabled) StartAutoScheduler();
+                            }
+                        });
+                    }
+
+                    // Poll events to keep the application responsive to OS signals (like shutdown)
+                    Raylib.PollInputEvents();
+                    
+                    // Sleep to save CPU since we aren't rendering
+                    Thread.Sleep(100); 
+                    continue; 
+                }
+
+                // 4. NORMAL MODE (VISIBLE)
                 if (Raylib.WindowShouldClose()) { shouldExit = true; continue; }
 
                 rlImGui.Begin();
@@ -513,7 +537,7 @@ namespace VRChatUnfriendManager
             rlImGui.Shutdown();
             Raylib.CloseWindow();
         }
-
+        
         private static void ShowUnfriendToast(string displayName)
         {
             ShowToast("Unfriended", $"{displayName} has been removed.");
@@ -990,29 +1014,41 @@ namespace VRChatUnfriendManager
 
         private static void UpdateStartup(bool enable)
         {
+            var exePath = Process.GetCurrentProcess().MainModule?.FileName;
+            if (string.IsNullOrEmpty(exePath)) return;
+
+            // ADD THE ARGUMENT HERE
+            string cmdArgs = $"\"{exePath}\" --autostart";
+
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                // Windows Registry Code
+                try 
+                {
+                    // Requires: using Microsoft.Win32;
+                    using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", true);
+                    if (enable) key?.SetValue("VRChatUnfriendManager", cmdArgs);
+                    else key?.DeleteValue("VRChatUnfriendManager", false);
+                }
+                catch (Exception ex) { Console.WriteLine($"[STARTUP] Windows Failed: {ex.Message}"); }
             }
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
                 try
                 {
-                    string autostartDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "autostart"); // ~/.config/autostart
+                    string autostartDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "autostart");
                     if (!Directory.Exists(autostartDir)) Directory.CreateDirectory(autostartDir);
-                    
+            
                     string desktopFile = Path.Combine(autostartDir, "VRChatUnfriendManager.desktop");
-                    
+            
                     if (enable)
                     {
-                        var exePath = Process.GetCurrentProcess().MainModule?.FileName;
                         string content = $"""
-                        [Desktop Entry]
-                        Type=Application
-                        Name=VRChat Unfriend Manager
-                        Exec={exePath}
-                        Terminal=false
-                        """;
+                                          [Desktop Entry]
+                                          Type=Application
+                                          Name=VRChat Unfriend Manager
+                                          Exec={cmdArgs}
+                                          Terminal=false
+                                          """;
                         File.WriteAllText(desktopFile, content);
                     }
                     else
@@ -1020,7 +1056,7 @@ namespace VRChatUnfriendManager
                         if (File.Exists(desktopFile)) File.Delete(desktopFile);
                     }
                 }
-                catch (Exception ex) { Console.WriteLine($"[STARTUP] Failed: {ex.Message}"); }
+                catch (Exception ex) { Console.WriteLine($"[STARTUP] Linux Failed: {ex.Message}"); }
             }
         }
         
